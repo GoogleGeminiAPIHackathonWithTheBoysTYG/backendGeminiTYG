@@ -2,6 +2,7 @@ import base64
 import json
 import time
 import logging
+import requests
 
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Header
 from fastapi.responses import FileResponse
