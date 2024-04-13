@@ -1,0 +1,23 @@
+version: '3.10'
+
+volumes:
+  geminiapibin:
+
+
+services:
+  geminiapi:
+    &geminiapi
+    image: geminiapi
+    env_file: .geminiapi.env
+    environment:
+      DO_NOT_USE_CELERY: "true"
+    build:
+      context: .
+      network: host
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - .:/app:z
+      - geminiapibin:/geminiapi-bin:z

@@ -1,27 +1,19 @@
-FROM node:18.16 AS frontend_builder
-
-WORKDIR /frontend
-
-COPY ./frontend/package.json ./frontend/yarn.lock ./
-
-RUN yarn install --frozen-lockfile
-
-COPY ./frontend/ ./
-
-RUN yarn build
-
 FROM tiangolo/uvicorn-gunicorn-fastapi:python3.10-slim
 
-WORKDIR /
+# Set the working directory in the container
+WORKDIR /app
 
-ENV MAX_WORKERS=5
+# Copy the current directory contents into the container at /app
+COPY ./app /app
 
-RUN apt-get update && apt-get install -y ffmpeg
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ./backend/requirements.txt /tmp/
+# Make port 80 available to the world outside this container
+EXPOSE 80
 
-RUN pip install --no-cache-dir --upgrade -r /tmp/requirements.txt
+# Define environment variable
+ENV NAME World
 
-COPY ./backend /app
-
-COPY --from=frontend_builder /frontend/dist /app/frontend/dist
+# Run main.py when the container launches with hot-reloading
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
