@@ -3,7 +3,8 @@ import json
 import time
 import logging
 import requests
-import asyncio
+import os
+
 
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Header
 from fastapi.responses import FileResponse
@@ -73,22 +74,48 @@ def insert_recording(report: Report):
             "transcript": report.transcript,
             "feedback": {},
             "summary": report.summary
-        }).execute()
-
-        print(response)
-        
-        # if response.error:
-        #     print("Error inserting to database:", response.error)
+        }).execute()        
     except Exception as e:
         print("An error occurred:", e)
+
+def analyze_audio(url):
+    prompt = "Listen carefully to the following audio file. Provide a brief summary. Explain what the salesperson could have done better and provide real examples. Also analyze their tone  and emotion and what they did poorly"
+
+    GOOGLE_API_KEY='AIzaSyBHTbvoNMQo_jJPPO-ac87C71uVZBNmPd4'
+    genai.configure(api_key=GOOGLE_API_KEY)
+    
+    response = requests.get(url)
+    file_path = 'sample.wav'
+    
+    if response.status_code == 200:
+        with open(file_path, 'wb') as f:
+            f.write(response.content)
+        print("File downloaded successfully.")
+    else:
+        print("Failed to download the file.")
+        return None
+
+    try:
+        your_file = genai.upload_file(path=file_path)
+        
+        model = genai.GenerativeModel('models/gemini-1.5-pro-latest') 
+        response = model.generate_content([prompt, your_file])
+
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print("Temporary file deleted successfully.")
+    
+    return response
 
 @app.post("/report/")
 async def receive_report(wrapper: MessageWrapper):
     report = wrapper.message
     if (report.type == "end-of-call-report"):
         insert_recording(report)
+        response = analyze_audio(report.recordingUrl)
+        print(response.text)
 
     return {"received_data": report.dict()}
-
 
 # app.mount("/", StaticFiles(directory="/app/frontend/dist"), name="static")
