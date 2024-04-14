@@ -4,7 +4,7 @@ import time
 import logging
 import requests
 import os
-
+import httpx
 
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Header
 from fastapi.responses import FileResponse
@@ -66,18 +66,6 @@ class Report(BaseModel):
 class MessageWrapper(BaseModel):
     message: Report
 
-def insert_recording(report: Report):
-    try:
-        # Sync call wrapped in a separate function for background execution
-        response = supabase.table('recordings').upsert({
-            "recording_url": report.recordingUrl,
-            "transcript": report.transcript,
-            "feedback": {},
-            "summary": report.summary
-        }).execute()        
-    except Exception as e:
-        print("An error occurred:", e)
-
 def analyze_audio(url):
     prompt = "Listen carefully to the following audio file. Provide a brief summary. Explain what the salesperson could have done better and provide real examples. Also analyze their tone  and emotion and what they did poorly"
 
@@ -108,13 +96,34 @@ def analyze_audio(url):
     
     return response
 
+def insert_recording(report: Report):
+    evaluation = analyze_audio(report.recordingUrl)
+    try:
+        response = supabase.table('recordings').upsert({
+            "recording_url": report.recordingUrl,
+            "transcript": report.transcript,
+            "feedback": evaluation.text,
+            "summary": report.summary
+        }).execute()        
+    except Exception as e:
+        print("An error occurred:", e)
+
 @app.post("/report/")
 async def receive_report(wrapper: MessageWrapper):
     report = wrapper.message
+    webhook_url = "https://webhook.site/a7348f3b-fc20-4b8d-a6fb-2152cf96f1d1"
+    async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(webhook_url, json=report.dict())
+                response.raise_for_status()
+                print("Payload sent to webhook successfully:", response.status_code)
+            except httpx.HTTPError as err:
+                print("An error occurred while sending to the webhook:", err)
+                return {"error": "Failed to send data to the webhook", "details": str(err)}
+
+    # POST HERE OF report
     if (report.type == "end-of-call-report"):
         insert_recording(report)
-        response = analyze_audio(report.recordingUrl)
-        print(response.text)
 
     return {"received_data": report.dict()}
 
