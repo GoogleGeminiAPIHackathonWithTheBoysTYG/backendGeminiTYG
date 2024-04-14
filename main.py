@@ -3,20 +3,24 @@ import json
 import time
 import logging
 import requests
-
+import asyncio
 
 from fastapi import FastAPI, UploadFile, BackgroundTasks, Header
 from fastapi.responses import FileResponse
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Extra
+from supabase import create_client, Client
 
+import google.generativeai as genai
 
 app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 
-
+supabaseUrl = 'https://hetpfsivwrylmfhwtnpz.supabase.co'
+supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhldHBmc2l2d3J5bG1maHd0bnB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTMwMjA5MzUsImV4cCI6MjAyODU5NjkzNX0.KOLWeSx8vn70IS9EWB5LgTnlURYaJEDwhx3miwBJvrU'
+supabase: Client = create_client(supabaseUrl, supabaseKey)
 
 @app.get("/")
 async def root():
@@ -51,14 +55,40 @@ async def floorplans():
 
 class Report(BaseModel):
     type: str
-    endedReason: str
     transcript: str
     summary: str
     recordingUrl: str
 
+    class Config:
+        extra = Extra.ignore
+
+class MessageWrapper(BaseModel):
+    message: Report
+
+def insert_recording(report: Report):
+    try:
+        # Sync call wrapped in a separate function for background execution
+        response = supabase.table('recordings').upsert({
+            "recording_url": report.recordingUrl,
+            "transcript": report.transcript,
+            "feedback": {},
+            "summary": report.summary
+        }).execute()
+
+        print(response)
+        
+        # if response.error:
+        #     print("Error inserting to database:", response.error)
+    except Exception as e:
+        print("An error occurred:", e)
+
 @app.post("/report/")
-async def receive_report(report: Report):
-    print(report)
+async def receive_report(wrapper: MessageWrapper):
+    report = wrapper.message
+    if (report.type == "end-of-call-report"):
+        insert_recording(report)
+
     return {"received_data": report.dict()}
+
 
 # app.mount("/", StaticFiles(directory="/app/frontend/dist"), name="static")

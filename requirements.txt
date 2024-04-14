@@ -10,3 +10,5 @@ requests~=2.31.0
 edge-tts~=6.1.8
 elevenlabs~=0.2.26
 requests~=2.31.0
+supabase~=2.4.2
+google-generativeai==0.5.0
