@@ -114,13 +114,13 @@ async def receive_report(wrapper: MessageWrapper):
     report = wrapper.message
     webhook_url = "https://webhook.site/ee2d2fb6-32aa-4609-869a-27890e2edd93"
     async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(webhook_url, json=report.dict())
-                response.raise_for_status()
-                print("Payload sent to webhook successfully:", response.status_code)
-            except httpx.HTTPError as err:
-                print("An error occurred while sending to the webhook:", err)
-                return {"error": "Failed to send data to the webhook", "details": str(err)}
+        try:
+            response = await client.post(webhook_url, json=report.dict())
+            response.raise_for_status()
+            print("Payload sent to webhook successfully:", response.status_code)
+        except httpx.HTTPError as err:
+            print("An error occurred while sending to the webhook:", err)
+            return {"error": "Failed to send data to the webhook", "details": str(err)}
 
     # POST HERE OF report
     if (report.type == "end-of-call-report"):
