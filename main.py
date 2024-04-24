@@ -110,8 +110,9 @@ def insert_recording(report: Report):
 
 @app.post("/report/")
 async def receive_report(wrapper: MessageWrapper):
+    
     report = wrapper.message
-    webhook_url = "https://webhook.site/a7348f3b-fc20-4b8d-a6fb-2152cf96f1d1"
+    webhook_url = "https://webhook.site/ee2d2fb6-32aa-4609-869a-27890e2edd93"
     async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(webhook_url, json=report.dict())
