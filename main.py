@@ -123,7 +123,7 @@ async def receive_report(wrapper: MessageWrapper):
             response = await client.post(webhook_url, json=report.dict())
             response.raise_for_status()
             print("Payload sent to webhook successfully:", response.status_code)
-        except httpx.HTTPError as err:
+        except:
             print("An error occurred while sending to the webhook:", err)
             return {"error": "Failed to send data to the webhook", "details": str(err),
                     "received_data_to_resend": report.dict()}
